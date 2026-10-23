@@ -1,0 +1,180 @@
+-- Azi Force Spawner | Force Equip & Anti-Delete
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+
+local sg = Instance.new("ScreenGui")
+sg.Name = "AziForceSpawn"
+sg.ResetOnSpawn = false
+sg.Parent = PG
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 260, 0, 200)
+main.Position = UDim2.new(0.5, -130, 0.5, -100)
+main.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+main.BorderSizePixel = 0
+main.Active = true
+main.Parent = sg
+local mc = Instance.new("UICorner"); mc.CornerRadius = UDim.new(0, 8); mc.Parent = main
+local ms = Instance.new("UIStroke"); ms.Color = Color3.fromRGB(150, 0, 0); ms.Thickness = 2; ms.Parent = main
+
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 30)
+topBar.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+topBar.BorderSizePixel = 0
+topBar.Parent = main
+local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(0, 8); tc.Parent = topBar
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 1, 0); title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1; title.Text = "Force Spawn Tool"
+title.TextColor3 = Color3.fromRGB(255, 255, 255); title.Font = Enum.Font.GothamBold
+title.TextSize = 13; title.TextXAlignment = Enum.TextXAlignment.Left; title.Parent = topBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 20, 0, 20); closeBtn.Position = UDim2.new(1, -25, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 10; closeBtn.Parent = topBar
+local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(0, 4); cc.Parent = closeBtn
+closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
+
+local toolLbl = Instance.new("TextLabel")
+toolLbl.Size = UDim2.new(0, 100, 0, 20); toolLbl.Position = UDim2.new(0, 10, 0, 40)
+toolLbl.BackgroundTransparency = 1; toolLbl.Text = "Exact Tool Name"
+toolLbl.TextColor3 = Color3.fromRGB(200, 200, 200); toolLbl.Font = Enum.Font.Gotham
+toolLbl.TextSize = 12; toolLbl.TextXAlignment = Enum.TextXAlignment.Left; toolLbl.Parent = main
+
+local toolBox = Instance.new("TextBox")
+toolBox.Size = UDim2.new(1, -20, 0, 30); toolBox.Position = UDim2.new(0, 10, 0, 62)
+toolBox.BackgroundColor3 = Color3.fromRGB(10, 10, 12); toolBox.BorderColor3 = Color3.fromRGB(50, 50, 50)
+toolBox.BorderSizePixel = 1; toolBox.PlaceholderText = "e.g. MK2"
+toolBox.Text = "MK2"
+toolBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+toolBox.Font = Enum.Font.Gotham; toolBox.TextSize = 12; toolBox.Parent = main
+local tbc = Instance.new("UICorner"); tbc.CornerRadius = UDim.new(0, 6); tbc.Parent = toolBox
+
+local spawnBtn = Instance.new("TextButton")
+spawnBtn.Size = UDim2.new(1, -20, 0, 35); spawnBtn.Position = UDim2.new(0, 10, 0, 110)
+spawnBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); spawnBtn.Text = "FORCE SPAWN"
+spawnBtn.TextColor3 = Color3.fromRGB(255, 255, 255); spawnBtn.Font = Enum.Font.GothamBold
+spawnBtn.TextSize = 12; spawnBtn.Parent = main
+local sbc = Instance.new("UICorner"); sbc.CornerRadius = UDim.new(0, 6); sbc.Parent = spawnBtn
+
+local statusLbl = Instance.new("TextLabel")
+statusLbl.Size = UDim2.new(1, -20, 0, 30); statusLbl.Position = UDim2.new(0, 10, 0, 160)
+statusLbl.BackgroundTransparency = 1; statusLbl.Text = "Status: Ready"
+statusLbl.TextColor3 = Color3.fromRGB(150, 150, 150); statusLbl.Font = Enum.Font.Gotham
+statusLbl.TextSize = 11; statusLbl.TextXAlignment = Enum.TextXAlignment.Left; statusLbl.TextWrapped = true; statusLbl.Parent = main
+
+-- ─── FORCE SPAWN LOGIC ────────────────────────────────────
+local isSpamming = false
+
+spawnBtn.MouseButton1Click:Connect(function()
+    local name = toolBox.Text:lower()
+    if name == "" then return end
+
+    local char = LP.Character
+    if not char then return end
+
+    local RS = game:GetService("ReplicatedStorage")
+    local toolsFolder = RS:FindFirstChild("Tools") or (RS:FindFirstChild("GunShop") and RS.GunShop:FindFirstChild("Tools"))
+
+    if not toolsFolder then
+        statusLbl.Text = "Tools folder not found!"
+        return
+    end
+
+    local foundItem = nil
+    for _, obj in ipairs(toolsFolder:GetDescendants()) do
+        if (obj:IsA("Tool") or obj:IsA("Model")) and (obj.Name:lower() == name or obj.Name:lower():find(name)) then
+            foundItem = obj
+            break
+        end
+    end
+
+    if foundItem then
+        statusLbl.Text = "Found: " .. foundItem.Name .. ". Spawning..."
+        
+        local function cloneAndEquip()
+            local clone = foundItem:Clone()
+            
+            -- Convert Model to Tool if needed
+            if clone:IsA("Model") then
+                local handle = clone:FindFirstChild("Handle")
+                if handle then
+                    local newTool = Instance.new("Tool")
+                    newTool.Name = clone.Name
+                    for _, child in ipairs(clone:GetChildren()) do
+                        child.Parent = newTool
+                    end
+                    clone:Destroy()
+                    clone = newTool
+                end
+            end
+
+            if clone:IsA("Tool") then
+                -- Force it directly into the player's hand
+                clone.Parent = char
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum:EquipTool(clone)
+                end
+            end
+        end
+
+        -- Spawn 5 times rapidly to fight the anti-cheat
+        for i = 1, 5 do
+            cloneAndEquip()
+            task.wait(0.1)
+        end
+
+        -- Anti-Delete Heartbeat Loop
+        if not isSpamming then
+            isSpamming = true
+            task.spawn(function()
+                for i = 1, 50 do
+                    task.wait(0.1)
+                    local hasTool = char:FindFirstChild(foundItem.Name) or LP.Backpack:FindFirstChild(foundItem.Name)
+                    if not hasTool then
+                        cloneAndEquip()
+                    end
+                end
+                isSpamming = false
+            end)
+        end
+
+        statusLbl.Text = "Spawned " .. foundItem.Name .. "!"
+        spawnBtn.Text = "SPAWNED!"
+        spawnBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        
+        task.wait(1.5)
+        spawnBtn.Text = "FORCE SPAWN"
+        spawnBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    else
+        statusLbl.Text = "Tool not found!"
+        spawnBtn.Text = "NOT FOUND"
+        spawnBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        task.wait(1.5)
+        spawnBtn.Text = "FORCE SPAWN"
+        spawnBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    end
+end)
+
+-- ─── DRAG LOGIC ───────────────────────────────────────────
+local dragging, dragStart, startPos
+topBar.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = i.Position; startPos = main.Position
+    end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+UIS.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local d = i.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end)
